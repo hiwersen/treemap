@@ -1,0 +1,66 @@
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+body {
+    background:
+    repeating-linear-gradient(0deg, 
+    transparent, 
+    transparent 44px, 
+    rgb(245, 245, 245) 44px,
+    rgb(245, 245, 245) 45px), 
+    repeating-linear-gradient(90deg, 
+     transparent, 
+     transparent 14px, 
+    rgb(245, 245, 245) 14px,
+    rgb(245, 245, 245) 15px),
+    rgb(233, 233, 233);
+    color:rgb(88, 88, 90);
+    height: 100vh;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#chart-container {
+    background-color: rgba(255, 255, 255);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    /*width: 1200px;*/
+    /*height: 500px;*/
+    box-shadow: rgba(159, 155, 170, 0.342) 20px 50px 50px 10px;
+}
+
+.tooltip {
+    background-color: rgba(39, 24, 10, 0.75);
+    color:white;
+    font-size: 1.1rem;
+    text-align: left;
+    padding: 0.3rem;
+    border-radius: 3px;
+    border: 1px solid black;
+    box-shadow: 3px 5px 10px 2px rgba(39, 24, 10, 0.75);
+}
+
+#title, #subtitle {
+    color:rgb(69, 69, 71);
+    text-align: center;
+    font-size: 1.6rem;
+}
+
+#subtitle {
+    font-size: 0.95rem;
+}
+
+.cell:hover {
+    fill: red;
+}
+
+footer {
+    margin-top: 2rem;
+}

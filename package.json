@@ -1,0 +1,15 @@
+{
+  "name": "fcc-heatmap",
+  "version": "0.1.0",
+  "description": "Heat Map - FreeCodeCamp Data Visualization Project",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
