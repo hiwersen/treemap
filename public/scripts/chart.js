@@ -9,8 +9,27 @@ document.addEventListener("DOMContentLoaded", () => {
         const { monthlyVariance: dataset } = response;
         const { baseTemperature } = response;
 
-        const monthScale = d3.scaleOrdinal()
-        .domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+        dataset.forEach(d => {
+            --d.month;
+            d.temperature = baseTemperature + d.variance;
+        });
+
+        const minX = d3.min(dataset, d => d.year);
+        const maxX = d3.max(dataset, d => d.year);
+        const minY = d3.min(dataset, d => d.month);
+        const maxY = d3.max(dataset, d => d.month);
+        const minTemp = d3.min(dataset, d => d.temperature);
+        const maxTemp = d3.max(dataset, d => d.temperature);
+
+        const svgW = 1200;
+        const svgH = 500;
+        const padding = 50; // SVG area padding
+        const domainPadding = 1; // 1 year padding
+        const cellW = svgW / (maxX - minX + 1)
+        const cellH = (svgH - 2 * padding) / 12;
+
+        const monthScale = d3.scaleQuantize()
+        .domain([0, 11])
         .range([
             "January",
             "February",
@@ -26,8 +45,8 @@ document.addEventListener("DOMContentLoaded", () => {
             "December",
         ]);
 
-        const colorScale = d3.scaleOrdinal()
-        .domain([1, 2, 3, 4, 5, 6, 7, 8, 9])
+        const colorScale = d3.scaleQuantize()
+        .domain([minTemp, maxTemp]) // both are inclusive
         .range([
             "#005F73",
             "#0A9396",
@@ -40,55 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "#9B2226",
         ]);
 
-        const getCategory = (min, max, categoryNumber, num) => {
-            if (min > max) return "min cannot be greater than max";
-            if (num < min || num > max) return "num out of range";
-            if (num === max) return categoryNumber;
-
-            const range = (max - min) / categoryNumber;
-            let nextCategory = min + range;
-            let category = 1;
-
-            do {
-                if (num < nextCategory) return category;
-                category++;
-                nextCategory = min + range * category;
-            } while (category <= categoryNumber)
-        };
-
-        dataset.forEach((d, _, dataset) => {
-            let { month } = d;
-            --month;
-            const monthName = monthScale(month);
-            d.month = [month, monthName];
-
-            const varianceMin = d3.min(dataset, d => d.variance);
-            const varianceMax = d3.max(dataset, d => d.variance);
-            const { variance } = d;
-            const temperature = Number((baseTemperature + variance).toFixed(3)); // rouding might cause problem
-            const temperatureCategory = getCategory(
-                varianceMin, 
-                varianceMax, 
-                colorScale.domain().length, 
-                d.variance);
-            const temperatureColor = colorScale(temperatureCategory);
-            d.temperature = [temperature, temperatureColor];
-        });
-
-        const minX = d3.min(dataset, d => d.year);
-        const maxX = d3.max(dataset, d => d.year);
-        const minY = d3.min(dataset, d => d.month[0]);
-        const maxY = d3.max(dataset, d => d.month[0]);
-
-        const svgW = 1200;
-        const svgH = 500;
-        const padding = 65; // SVG area padding
-        const cellW = svgW / (maxX - minX + 1)
-        const cellH = (svgH - 2 * padding) / 12;
-
         const xScale = d3.scaleLinear()
-        .domain([minX, maxX])
-        .range([padding * 1.5, svgW - padding]);
+        .domain([minX, maxX + domainPadding])
+        .range([padding, svgW - padding]);
 
         const yScale = d3.scaleLinear()
         .domain([minY, maxY])
@@ -105,29 +78,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const svg = d3.select("#chart-container")
         .append("svg")
+        .attr("id", "svg")
         .attr("width", svgW)
-        .attr("height", svgH)
-        .attr("id", "svg");
+        .attr("height", svgH);
 
         svg.selectAll("rect")
         .data(dataset)
         .enter()
         .append("rect")
         .attr("x", d => xScale(d.year))
-        .attr("y", d => yScale(d.month[0]))
+        .attr("y", d => yScale(d.month))
         .attr("width", cellW )
         .attr("height", cellH)
-        .attr("fill", d => d.temperature[1])
+        .attr("fill", d => colorScale(d.temperature))
         .attr("class", "cell")
         .attr("data-year", d => d.year)
-        .attr("data-month", d => d.month[0])
-        .attr("data-temp", d => d.temperature[0])
+        .attr("data-month", d => d.month)
+        .attr("data-temp", d => d.temperature)
+        // TODO: solve tooltip inconsistant behavior *******************************************************************
         .on("mouseover", (event, d) => {
             tooltip
-            .attr("data-year", d.year)
-            .html(`${d.year} - ${d.month[1]}<br>
-            Temperature: ${d.temperature[0].toFixed(1)}℃<br>
+            .html(`${d.year} - ${monthScale(d.month)}<br>
+            Temperature: ${d.temperature.toFixed(1)}℃<br>
             Variance: ${d.variance.toFixed(1)}℃`)
+            .attr("data-year", d.year)
+            .attr("data-month", d.month)
+            .attr("data-temp", d.temperature)
             .style("opacity", 1)
             .style("position", "absolute")
             .style("top", event.pageY + "px")
@@ -136,8 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .on("mouseout", () => {
             tooltip
             .style("opacity", 0)
-            // Move the tooltip out of the svg area so that other .dots can reliably be hovered,
-            // without the tooltip overlapping them
             .style("top", "-100px")
             .style("left", "-100px");
         });
@@ -145,7 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const yearFormat = d3.format("d");
         const xAxisGenerator = d3.axisBottom(xScale).tickFormat(yearFormat);
         const yAxisGenerator = d3.axisLeft(yScale).tickFormat(monthScale);
-        //const legendAxisGenerator = d3.axisRigth();
 
         const xAxis = svg
         .append("g")
@@ -156,9 +129,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const yAxis = svg
         .append("g")
         .attr("id", "y-axis")
-        .attr("transform", `translate(${padding * 1.5}, ${cellH / 2})`)
+        .attr("transform", `translate(${padding}, ${cellH / 2})`)
         .call(yAxisGenerator);
-        
+
         xAxis.selectAll("g").attr("class", "tick");
         yAxis.selectAll("g").attr("class", "tick");
 
@@ -182,25 +155,70 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const legend = svg.append("g")
         .attr("id", "legend")
-        .attr("transform", `translate(${svgW - padding + 15}, ${(svgH / 2) - (colorScale.domain().length * cellH / 2)})`);
+        .attr("transform", `translate(${padding}, ${svgH - padding / 2})`);
 
-        legend.selectAll("g")
-        .data(colorScale.domain())
+        legend.selectAll("rect")
+        .data(colorScale.range().map((_, i) => i))
         .enter()
-        .append("g")
-        .attr("transform", (_, i) => `translate(0, ${i * cellH})`);
-
-        legend.selectAll("g")
         .append("rect")
+        .attr("x", (_, i) => i * cellH)
+        .attr("height", cellW)
+        .attr("width", cellH)
+        .attr("fill", d => colorScale.range()[d]);
+
+        const legendScale = d3.scaleLinear()
+        .domain([minTemp, maxTemp])
+        .range([0, cellH * colorScale.range().length]);
+
+        const getLegendValues = (minTemp, maxTemp, tickNum) => {
+            const values = [];
+            const range = (maxTemp - minTemp) / tickNum;
+            let value = minTemp;
+
+            while (value <= maxTemp) {
+                values.push(value);
+                value += range;
+            }
+            return values;
+        };
+
+        const legendAxisGenerator = d3.axisBottom(legendScale)
+        .tickValues(getLegendValues(minTemp, maxTemp, colorScale.range().length))
+        .tickFormat(d3.format(".2f"));
+
+        const legendAxis = legend
+        .append("g")
+        .attr("id", "legend-axis")
+        .attr("transform", `translate(0, ${cellW})`)
+        .call(legendAxisGenerator);
+
+        /*
+
+        const legendH = colorScale.range().length * cellH;
+
+        const legend2 = svg.append("g")
+        .attr("id", "legend2")
+        .attr("transform", `translate(${svgW - padding + 15}, ${(svgH / 2) + (legendH / 2)})`);
+
+        legend.selectAll("rect")
+        .data(colorScale.range().map((_, i) => i))
+        .enter()
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", (_, i) =>  -cellH - (i * cellH))
         .attr("height", cellH)
         .attr("width", cellW)
-        .attr("fill", d => colorScale(d));
+        .attr("fill", d => colorScale.range()[d]);
 
-        legend.selectAll("g")
-        .append("text")
-        .text("text here")
-        .attr("transform", `translate(${cellW * 2}, ${cellH / 2})`)
-        .style("text-anchor", "start")
-        .style("font-size", "0.8rem");
+        const legendAxisGenerator = d3.axisRight(legendScale);
+
+        const legendAxis = legend
+        .append("g")
+        .attr("id", "legend-axis")
+        .call(legendAxisGenerator);
+
+        legendAxis.selectAll("g").attr("class", "tick");
+        */
+        /** */
     };
 });
