@@ -23,10 +23,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const svgW = 1200;
         const svgH = 500;
-        const padding = 50; // SVG area padding
-        const domainPadding = 1; // 1 year padding
+        const paddingW = 80; // SVG area
+        const paddingH = 60; // SVG area
+        const domainPadding = 1; // 1 year
         const cellW = svgW / (maxX - minX + 1)
-        const cellH = (svgH - 2 * padding) / 12;
+        const cellH = (svgH - 2 * paddingH) / 12;
 
         const monthScale = d3.scaleQuantize()
         .domain([0, 11])
@@ -61,11 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const xScale = d3.scaleLinear()
         .domain([minX, maxX + domainPadding])
-        .range([padding, svgW - padding]);
+        .range([paddingW, svgW - paddingW]);
 
         const yScale = d3.scaleLinear()
         .domain([minY, maxY])
-        .range([svgH - padding - cellH, padding]);
+        .range([svgH - paddingH - cellH, paddingH]);
 
         const tooltip = d3.select("body")
         .append("div")
@@ -95,7 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .attr("data-year", d => d.year)
         .attr("data-month", d => d.month)
         .attr("data-temp", d => d.temperature)
-        // TODO: solve tooltip inconsistant behavior *******************************************************************
         .on("mouseover", (event, d) => {
             tooltip
             .html(`${d.year} - ${monthScale(d.month)}<br>
@@ -123,13 +123,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const xAxis = svg
         .append("g")
         .attr("id", "x-axis")
-        .attr("transform", `translate(0, ${svgH - padding})`)
+        .attr("transform", `translate(0, ${svgH - paddingH})`)
         .call(xAxisGenerator);
 
         const yAxis = svg
         .append("g")
         .attr("id", "y-axis")
-        .attr("transform", `translate(${padding}, ${cellH / 2})`)
+        .attr("transform", `translate(${paddingW}, ${cellH / 2})`)
         .call(yAxisGenerator);
 
         xAxis.selectAll("g").attr("class", "tick");
@@ -140,35 +140,38 @@ document.addEventListener("DOMContentLoaded", () => {
         .text("Monthly Global Land-Surface Temperature")
         .attr("id", "title")
         .attr("x", svgW / 2)
-        .attr("y", padding / 2)
+        .attr("y", paddingH / 2)
         .style("text-anchor", "middle")
-        .style("font-size", "1.6rem");
+        .style("font-size", "1.5rem");
 
         svg
         .append("text")
         .text(`${minX} - ${maxX}: base temperature ${baseTemperature}℃`)
         .attr("id", "description")
         .attr("x", svgW / 2)
-        .attr("y", (padding / 2) + 20)
+        .attr("y", (paddingH / 2) + 20)
         .style("text-anchor", "middle")
-        .style("font-size", "1.1rem");
+        .style("font-size", "0.9rem");
+
+        const legendH = colorScale.range().length * cellH;
 
         const legend = svg.append("g")
         .attr("id", "legend")
-        .attr("transform", `translate(${padding}, ${svgH - padding / 2})`);
+        .attr("transform", `translate(${svgW - paddingW + 15}, ${(svgH / 2) + (legendH / 2)})`);
 
         legend.selectAll("rect")
-        .data(colorScale.range().map((_, i) => i))
+        .data(colorScale.range())
         .enter()
         .append("rect")
-        .attr("x", (_, i) => i * cellH)
-        .attr("height", cellW)
-        .attr("width", cellH)
-        .attr("fill", d => colorScale.range()[d]);
+        .attr("x", 0)
+        .attr("y", (_, i) => -(++i * cellH))
+        .attr("height", cellH)
+        .attr("width", cellW)
+        .attr("fill", d => d);
 
         const legendScale = d3.scaleLinear()
         .domain([minTemp, maxTemp])
-        .range([0, cellH * colorScale.range().length]);
+        .range([0, -(cellH * colorScale.range().length)]);
 
         const getLegendValues = (minTemp, maxTemp, tickNum) => {
             const values = [];
@@ -182,43 +185,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return values;
         };
 
-        const legendAxisGenerator = d3.axisBottom(legendScale)
+        const legendAxisGenerator = d3.axisRight(legendScale)
         .tickValues(getLegendValues(minTemp, maxTemp, colorScale.range().length))
         .tickFormat(d3.format(".2f"));
 
         const legendAxis = legend
         .append("g")
         .attr("id", "legend-axis")
-        .attr("transform", `translate(0, ${cellW})`)
-        .call(legendAxisGenerator);
-
-        /*
-
-        const legendH = colorScale.range().length * cellH;
-
-        const legend2 = svg.append("g")
-        .attr("id", "legend2")
-        .attr("transform", `translate(${svgW - padding + 15}, ${(svgH / 2) + (legendH / 2)})`);
-
-        legend.selectAll("rect")
-        .data(colorScale.range().map((_, i) => i))
-        .enter()
-        .append("rect")
-        .attr("x", 0)
-        .attr("y", (_, i) =>  -cellH - (i * cellH))
-        .attr("height", cellH)
-        .attr("width", cellW)
-        .attr("fill", d => colorScale.range()[d]);
-
-        const legendAxisGenerator = d3.axisRight(legendScale);
-
-        const legendAxis = legend
-        .append("g")
-        .attr("id", "legend-axis")
+        .attr("transform", `translate(${cellW},0)`)
         .call(legendAxisGenerator);
 
         legendAxis.selectAll("g").attr("class", "tick");
-        */
-        /** */
     };
 });
