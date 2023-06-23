@@ -1,7 +1,7 @@
 {
-  "name": "fcc-heatmap",
+  "name": "fcc-choroplethmap",
   "version": "0.1.0",
-  "description": "Heat Map - FreeCodeCamp Data Visualization Project",
+  "description": "Choropleth Map - FreeCodeCamp Data Visualization Project",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
