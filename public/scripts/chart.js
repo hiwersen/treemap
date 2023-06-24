@@ -45,60 +45,41 @@
         .attr("id", "source")
         .html(`Source: <a href="https://www.ers.usda.gov/data-products/county-level-data-sets/download-data.aspx" target="_blank">USDA Economic Research Service</a>`);
 
-        
         const req = new XMLHttpRequest();
 
         const urlCountyData = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json";
         const urlEducationData = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json";
 
         req.open("GET", urlCountyData, true);
-        //req.open("GET", urlEducationData, true);
         req.send();
         req.onload = () => {
-            // Fetch topoJSON file
-            let { responseText: response } = req;
-
-            // Convert JSON string into JS Object
-            const us = JSON.parse(response);
-
-            console.log(Object.keys(us.objects));
-
-            const featuresCounties = topojson.feature(us, us.objects.counties).features;
-            const featuresStates = topojson.feature(us, us.objects.states).features;
-            
-            counties.selectAll("path")
-            .data(featuresCounties)
-            .enter()
-            .append("path")
-            .attr("class", "county")
-            .attr("d", d3.geoPath());
-
-            states.selectAll("path")
-            .data(featuresStates)
-            .enter()
-            .append("path")
-            .attr("class", "states")
-            .attr("d", d3.geoPath())
-            .attr("fill", "none")
-            .attr("stroke", "white");
-
+            const countyData = JSON.parse(req.responseText);
 
             req.open("GET", urlEducationData, true);
-            //req.open("GET", urlEducationData, true);
             req.send();
             req.onload = () => {
-                let { responseText: response } = req;
+                const educationData = JSON.parse(req.responseText);
 
-                // Convert JSON string into JS Object
-                const usEducation = JSON.parse(response);
-
-                usEducation.forEach(element => {
-                    element.education = element.bachelorsOrHigher;
-                    delete element.bachelorsOrHigher;
+                educationData.forEach(elem => {
+                    elem.education = elem.bachelorsOrHigher;
+                    delete elem.bachelorsOrHigher;
                 });
 
-                const minEdu = d3.min(usEducation, ({ education }) => education);
-                const maxEdu = d3.max(usEducation, ({ education }) => education);
+                const educationLookup = {};
+
+                educationData.forEach(elem => {
+                    educationLookup[elem.fips] = elem;
+                });
+
+                const featuresStates = topojson.feature(countyData, countyData.objects.states).features;
+                const featuresCounties = topojson.feature(countyData, countyData.objects.counties).features;
+
+                featuresCounties.forEach(elem => {
+                    elem.properties = educationLookup[elem.id];
+                });
+
+                const minEdu = d3.min(educationData, ({ education }) => education);
+                const maxEdu = d3.max(educationData, ({ education }) => education);
 
                 const colorScale = d3.scaleQuantize()
                 .domain([minEdu, maxEdu]) // both are inclusive
@@ -113,18 +94,22 @@
                 ]);
 
                 counties.selectAll("path")
-                .data(usEducation)
-                .attr("data-fips", ({ fips }) => fips)
-                .attr("data-education", ({ education }) => education)
-                .attr("fill", ({ education }) => colorScale(education))
-                .on("mouseover", d => {
+                .data(featuresCounties)
+                .enter()
+                .append("path")
+                .attr("class", "county")
+                .attr("data-fips", feature => feature.properties.fips)
+                .attr("data-education", feature => feature.properties.education)
+                .attr("fill", feature => colorScale(feature.properties.education))
+                .attr("d", d3.geoPath())
+                .on("mouseover", (event, feature) => {
                     tooltip
-                    .html(`<p>${d.area_name}, ${d.state}: ${d.education}%</p>`)
-                    .attr("data-education", d.education)
+                    .html(`<p>${feature.properties.area_name}, ${feature.properties.state}: ${feature.properties.education}%</p>`)
+                    .attr("data-education", feature.properties.education)
                     .style("opacity", 1)
                     .style("position", "absolute")
-                    .style("top", event.pageY + "px")
-                    .style("left", event.pageX + "px");
+                    .style("top", event.pageY - 30 + "px")
+                    .style("left", event.pageX + 15 + "px");
                 })
                 .on("mouseout", () => {
                     tooltip
@@ -133,10 +118,18 @@
                     .style("left", "-100px");
                 });
 
+                states.selectAll("path")
+                .data(featuresStates)
+                .enter()
+                .append("path")
+                .attr("class", "state")
+                .attr("fill", "none")
+                .attr("stroke", "white")
+                .attr("d", d3.geoPath());
+
                 const legendW = 250;
                 const legendH = 8;
                 const legendCellW = legendW / colorScale.range().length;
-                
         
                 const legend = svg.append("g")
                 .attr("id", "legend")
@@ -167,21 +160,17 @@
                     }
                     return ticks;
                 };
-                
 
                 const legendAxisGenerator = d3.axisBottom(legendScale)
                 .tickValues(getTickValues(minEdu, maxEdu, colorScale.range().length))
                 .tickFormat(d3.format("0.0%"));
 
-                
                 const legendAxis = legend.append("g")
                 .attr("id", "legend-axis")
                 .attr("transform", `translate(0, ${legendH})`)
                 .call(legendAxisGenerator);
 
                 legendAxis.selectAll("g").attr("class", "tick");
-
             };
-
         };
     });
