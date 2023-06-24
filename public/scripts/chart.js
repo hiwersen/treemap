@@ -5,8 +5,6 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     const svgW = 960;
     const svgH = 600;
-    const paddingW = 50; // SVG area
-    const paddingH = 30; // SVG area
 
     const tooltip = d3.select("body")
     .append("div")
@@ -37,6 +35,10 @@ document.addEventListener("DOMContentLoaded", () => {
     .append("g")
     .attr("class", "counties");
 
+    const states = svg
+    .append("g")
+    .attr("class", "states");
+
     const source = d3.select("#chart-container")
     .append("div")
     .attr("id", "source")
@@ -56,16 +58,29 @@ document.addEventListener("DOMContentLoaded", () => {
         let { responseText: response } = req;
 
         // Convert JSON string into JS Object
-        const usCounties = JSON.parse(response);
+        const us = JSON.parse(response);
 
-        const features = topojson.feature(usCounties, usCounties.objects.counties).features;
+        console.log(Object.keys(us.objects));
+
+        const featuresCounties = topojson.feature(us, us.objects.counties).features;
+        const featuresStates = topojson.feature(us, us.objects.states).features;
         
         counties.selectAll("path")
-        .data(features)
+        .data(featuresCounties)
         .enter()
         .append("path")
         .attr("class", "county")
         .attr("d", d3.geoPath());
+
+        states.selectAll("path")
+        .data(featuresStates)
+        .enter()
+        .append("path")
+        .attr("class", "states")
+        .attr("d", d3.geoPath())
+        .attr("fill", "none")
+        .attr("stroke", "white");
+
 
         req.open("GET", urlEducationData, true);
         //req.open("GET", urlEducationData, true);
