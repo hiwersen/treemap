@@ -3,9 +3,34 @@
          * Create and render the empty SVG root when the page first loads
          * while wait for the JSON files to download
          */
-        const svgW = 960;
-        const svgH = 600;
-        const paddingH = 50;
+        const width = 960;
+        const height = 570;
+        const padding = 0.5;
+        
+        const legendH = 50;
+        const legendW = width - 4 * padding;
+        const legendBox = 15;
+
+        const colorSet = [
+            "#023047",
+            "#7CA982",
+            "#219EBC",
+            "#C2A83E",
+            "#FF0054",
+            "#EFCA08",
+            "#00A6A6",
+            "#AF4319",
+            "#F72585",
+            "#9E0059",
+            "#225560",
+            "#FB8500",
+            "#32DE8A",
+            "#CFD11A",
+            "#91C499",
+            "#808F85",
+            "#7AE582",
+            "#595959"
+        ];
 
         const tooltip = d3.select("body")
         .append("div")
@@ -16,161 +41,115 @@
         .style("left", "-100px")
         .style("top", "-100px");
 
-        const title = d3.select("#chart-container")
+        const title = d3.select("#diagram-container")
         .append("h1")
-        .text("United States Educational Attainment")
+        .text("Video Game Sales")
         .attr("id", "title");
 
-        const description = d3.select("#chart-container")
+        const description = d3.select("#diagram-container")
         .append("p")
-        .text("Percentage of adults age 25 and older with a bachelor's degree or higher (2010-2014)")
+        .text("Top 100 Most Sold Video Games Grouped by Platform")
         .attr("id", "description");
 
-        const svg = d3.select("#chart-container")
+        const svg = d3.select("#diagram-container")
         .append("svg")
-        .attr("id", "svg")
-        .attr("width", svgW)
-        .attr("height", svgH);
+        .attr("id", "tree-map")
+        .attr("width", width)
+        .attr("height", height);
 
-        const counties = svg
-        .append("g")
-        .attr("class", "counties");
-
-        const states = svg
-        .append("g")
-        .attr("class", "states");
-
-        const source = d3.select("#chart-container")
-        .append("div")
-        .attr("id", "source")
-        .html(`Source: <a href="https://www.ers.usda.gov/data-products/county-level-data-sets/download-data.aspx" target="_blank">USDA Economic Research Service</a>`);
+        const legend = d3.select("#diagram-container")
+        .append("svg")
+        .attr("id", "legend")
+        .attr("width", 120)
+        .attr("height", height)
+        .attr("width", legendW)
+        .attr("height", legendH)
+        .attr("transform", `translate(${0}, ${2 * legendBox})`);
+        //.style("background-color", "#D6D6D6");
 
         const req = new XMLHttpRequest();
 
-        const urlCountyData = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json";
-        const urlEducationData = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json";
+        const urlSalesData = "https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/video-game-sales-data.json";
 
-        req.open("GET", urlCountyData, true);
+        req.open("GET", urlSalesData, true);
         req.send();
         req.onload = () => {
-            const countyData = JSON.parse(req.responseText);
+            const salesData = JSON.parse(req.responseText);
 
-            req.open("GET", urlEducationData, true);
-            req.send();
-            req.onload = () => {
-                const educationData = JSON.parse(req.responseText);
+            const treemap = d3.treemap()
+            .size([width,  height])
+            .padding(padding);
 
-                educationData.forEach(elem => {
-                    elem.education = elem.bachelorsOrHigher;
-                    delete elem.bachelorsOrHigher;
-                });
+            const root = d3.hierarchy(salesData)
+            .sum(d => d.value)
+            .sort((a, b) => b.height - a.height || b.value - a.value);
 
-                const educationLookup = {};
+            treemap(root);
 
-                educationData.forEach(elem => {
-                    educationLookup[elem.fips] = elem;
-                });
+            const nodes = root.leaves();
 
-                const featuresStates = topojson.feature(countyData, countyData.objects.states).features;
-                const featuresCounties = topojson.feature(countyData, countyData.objects.counties).features;
+            const categories = [];
+            root.children.forEach(elem => categories.push(elem.data.name));
 
-                featuresCounties.forEach(elem => {
-                    elem.properties = educationLookup[elem.id];
-                });
+            const colorScale = d3.scaleOrdinal()
+            .domain(categories)
+            .range(colorSet);
 
-                const minEdu = d3.min(educationData, ({ education }) => education);
-                const maxEdu = d3.max(educationData, ({ education }) => education);
+            const node = svg.selectAll("g")
+            .data(nodes)
+            .enter()
+            .append("g")
+            .attr("class", "group")
+            .attr("transform", d => `translate(${d.x0}, ${d.y0})`);
 
-                const colorScale = d3.scaleQuantize()
-                .domain([minEdu, maxEdu]) // both are inclusive
-                .range([
-                    "#CEE8F0",
-                    "#A9D6E5",
-                    "#7DC1D8",
-                    "#51ADCB",
-                    "#3490AF",
-                    "#276C83",
-                    "#1A4858",
-                ]);
+            node.append("rect")
+            .attr("id", d => `${d.data.category}-${d.data.name}`)
+            .attr("class", "tile")
+            .attr("width", d => d.x1 - d.x0)
+            .attr("height", d => d.y1 - d.y0)
+            .attr("data-name", d => d.data.name)
+            .attr("data-category", d => d.data.category)
+            .attr("data-value", d => d.data.value)
+            .attr("fill", d =>  colorScale(d.data.category))
+            .on("mouseover", (event, { data }) => {
+                const rect = event.target.getBoundingClientRect();
+                tooltip
+                .html(`<p>Name: ${data.name}<br>Category: ${data.category}<br>Value: ${data.value}</p>`)
+                .attr("data-value", data.value)
+                .style("opacity", 1)
+                .style("position", "absolute")
+                .style("top", rect.y - 85 + "px")
+                .style("left", rect.x + 5 + "px");
+            })
+            .on("mouseout", () => {
+                tooltip
+                .style("opacity", 0)
+                .style("top", "-100px")
+                .style("left", "-100px");
+            });
 
-                counties.selectAll("path")
-                .data(featuresCounties)
-                .enter()
-                .append("path")
-                .attr("class", "county")
-                .attr("data-fips", feature => feature.properties.fips)
-                .attr("data-education", feature => feature.properties.education)
-                .attr("fill", feature => colorScale(feature.properties.education))
-                .attr("d", d3.geoPath())
-                .on("mouseover", (event, feature) => {
-                    tooltip
-                    .html(`<p>${feature.properties.area_name}, ${feature.properties.state}: ${feature.properties.education}%</p>`)
-                    .attr("data-education", feature.properties.education)
-                    .style("opacity", 1)
-                    .style("position", "absolute")
-                    .style("top", event.pageY - 30 + "px")
-                    .style("left", event.pageX + 15 + "px");
-                })
-                .on("mouseout", () => {
-                    tooltip
-                    .style("opacity", 0)
-                    .style("top", "-100px")
-                    .style("left", "-100px");
-                });
+            node.append("text")
+            .attr("class", "tile-text")
+            .attr("x", "5")
+            .attr("y", "20")
+            .text(d => d.data.name);
 
-                states.selectAll("path")
-                .data(featuresStates)
-                .enter()
-                .append("path")
-                .attr("class", "state")
-                .attr("fill", "none")
-                .attr("stroke", "white")
-                .attr("d", d3.geoPath());
+            legend.selectAll("g")
+            .data(categories)
+            .enter()
+            .append("g")
+            .attr("transform", (_, i, c) => `translate(${i * legendW / c.length}, ${0})`)
+            .append("rect")
+            .attr("width", legendBox)
+            .attr("height", legendBox)
+            .attr("class", "legend-item")
+            .attr("fill", d => colorScale(d));
 
-                const legendW = 250;
-                const legendH = 8;
-                const legendCellW = legendW / colorScale.range().length;
-        
-                const legend = svg.append("g")
-                .attr("id", "legend")
-                .attr("transform", `translate(${svgW / 2 + legendCellW * 3}, ${paddingH / 2})`);
-        
-                legend.selectAll("rect")
-                .data(colorScale.range())
-                .enter()
-                .append("rect")
-                .attr("x", (_, i) => i * legendCellW)
-                .attr("y", 0)
-                .attr("width", legendCellW)
-                .attr("height", legendH)
-                .attr("fill", d => d);
-
-                const legendScale = d3.scaleLinear()
-                .domain([minEdu / 100, maxEdu / 100])
-                .range([0, legendW]);
-
-                const getTickValues = (min, max, Categorynum) => {
-                    let ticks = [];
-                    const range = (max - min) / Categorynum;
-                    let tick = min;
-
-                    while (ticks.length <= Categorynum) { // The last tick value is inclusive
-                        ticks.push(Number.parseFloat(tick.toFixed(1)) / 100);
-                        tick += range;
-                    }
-                    return ticks;
-                };
-
-                const legendAxisGenerator = d3.axisBottom(legendScale)
-                .tickValues(getTickValues(minEdu, maxEdu, colorScale.range().length))
-                .tickFormat(d3.format("0.0%"));
-
-                const legendAxis = legend.append("g")
-                .attr("id", "legend-axis")
-                .attr("transform", `translate(0, ${legendH})`)
-                .call(legendAxisGenerator);
-
-                legendAxis.selectAll("g").attr("class", "tick");
-            };
+            legend.selectAll("g")
+            .append("text")
+            .text(d => d)
+            .attr("x", padding)
+            .attr("y", 2 * legendBox + 5)
+            .style("font-size", "0.9rem");
         };
     });

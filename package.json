@@ -1,7 +1,7 @@
 {
-  "name": "fcc-choroplethmap",
+  "name": "fcc-treemapdiagram",
   "version": "0.1.0",
-  "description": "Choropleth Map - FreeCodeCamp Data Visualization Project",
+  "description": "Treemap Diagram - FreeCodeCamp Data Visualization Project",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

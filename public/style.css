@@ -4,17 +4,16 @@
 
 body {
     background: 
-    
     repeating-linear-gradient(0deg, 
     transparent, 
-    transparent 14px, 
-    rgb(245, 245, 245) 14px,
-    rgb(245, 245, 245) 15px), 
+    transparent 50px, 
+    rgb(245, 245, 245) 50px,
+    rgb(245, 245, 245) 51px), 
     repeating-linear-gradient(90deg, 
      transparent, 
-     transparent 14px, 
-    rgb(245, 245, 245) 14px,
-    rgb(245, 245, 245) 15px),
+     transparent 50px, 
+    rgb(245, 245, 245) 50px,
+    rgb(245, 245, 245) 51px),
     rgb(233, 233, 233);
 
     color:rgb(88, 88, 90);
@@ -27,7 +26,7 @@ body {
     justify-content: center;
 }
 
-#chart-container {
+#diagram-container {
     background-color: rgba(255, 255, 255, 0);
     display: flex;
     flex-direction: column;
@@ -60,8 +59,13 @@ body {
     font-size: 1.2rem;
 }
 
-.county:hover {
+.tile:hover {
     fill: red;
+}
+
+.tile-text {
+    fill: white;
+    font-size: 0.8rem;
 }
 
 .tick {
