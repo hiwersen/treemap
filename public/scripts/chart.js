@@ -65,7 +65,6 @@
         .attr("width", legendW)
         .attr("height", legendH)
         .attr("transform", `translate(${0}, ${2 * legendBox})`);
-        //.style("background-color", "#D6D6D6");
 
         const req = new XMLHttpRequest();
 
@@ -157,8 +156,6 @@
                     let wordSVGLength = words[0][1];
 
                     if (wordSVGLength > rectangleWidth - 10 * padding) {
-                        console.log(words[0][0], wordSVGLength, d.data.name, i);
-
                         text += words.shift()[0];
                         textSVGLength = currentElement.select('text')
                         .append('tspan')

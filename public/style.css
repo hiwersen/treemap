@@ -64,7 +64,7 @@ body {
 }
 
 .tile-text {
-    /*fill: white;*/
+    fill: rgb(240, 239, 239);
     font-size: 0.8rem;
 }
 
@@ -72,9 +72,8 @@ body {
     font-size: 0.7rem;
 }
 
-#source {
-    margin: 0.75rem;
-    font-size: 0.95rem;
+#legend {
+    background-color: rgba(98, 105, 110, 0.1);
 }
 
 footer {
