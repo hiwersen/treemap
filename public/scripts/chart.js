@@ -131,8 +131,75 @@
             node.append("text")
             .attr("class", "tile-text")
             .attr("x", "5")
-            .attr("y", "20")
-            .text(d => d.data.name);
+            .attr("y", "20");
+
+            // DONNOT use arrow function as callback when the 'this' keyword is going to be needed  
+            node.each(function (d, i, nodes) {
+                const currentElement = d3.select(this); // returns the current g.group
+                const rectangleWidth = currentElement.select('rect').node().getAttribute('width');
+
+                const words = d.data.name
+                .split(' ')
+                .map(word => {
+                    const wordSVGLength = currentElement.select('text').text(word).node().getComputedTextLength();
+                    currentElement.select('text').text('');
+                    return [word, wordSVGLength];
+                });
+
+                const padding = 5;
+                let y = 15;
+                let text = '';
+                let textSVGLength = 0;
+                let count = 1;
+
+
+                 while (words.length > 0) {
+                    let wordSVGLength = words[0][1];
+
+                    if (wordSVGLength > rectangleWidth - 10 * padding) {
+                        console.log(words[0][0], wordSVGLength, d.data.name, i);
+
+                        text += words.shift()[0];
+                        textSVGLength = currentElement.select('text')
+                        .append('tspan')
+                        .text(text) // Single word in the tspan
+                        .attr("x", padding)
+                        .attr("y", y * count)
+                        .node()
+                        .getComputedTextLength();
+
+                        text = '';
+                        textSVGLength = 0;
+                        count++;
+
+                    } else {
+
+                        while (textSVGLength + wordSVGLength <= rectangleWidth - 10 * padding && words.length > 0) {
+                            if (text === '') {
+                                text += words.shift()[0];
+                                textSVGLength = currentElement.select('text')
+                                .append('tspan')
+                                .text(text) // First word in the tspan
+                                .attr("x", padding)
+                                .attr("y", y * count)
+                                .node()
+                                .getComputedTextLength();
+
+                            } else {
+                                text += ' ' + words.shift()[0];
+                                const lastTspan = currentElement.selectAll('text tspan').nodes().pop();
+                                textSVGLength = d3.select(lastTspan).text(text).node().getComputedTextLength();
+                            }
+
+                            wordSVGLength = words.length > 0 ? words[0][1] : 0;
+                        } 
+
+                        text = '';
+                        textSVGLength = 0;
+                        count++;
+                    }
+                 }
+            });
 
             legend.selectAll("g")
             .data(categories)
@@ -150,6 +217,6 @@
             .text(d => d)
             .attr("x", padding)
             .attr("y", 2 * legendBox + 5)
-            .style("font-size", "0.9rem");
+            .style("font-size", "0.95rem");
         };
     });
